@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - WEBUI_PORT=8080
+    volumes:
+      - ./config:/config
+      - /path/to/downloads:/downloads  # Update this path to your downloads location
+    ports:
+      - "6881:6881"     # Torrent port
+      - "6881:6881/udp" # Torrent port UDP
+      - "8080:8080"     # Web UI (for direct access if needed)
+    labels:
+      - "traefik.enable=true"
+      
+      # Local access
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbit.local`)"
+      - "traefik.http.routers.qbittorrent.entrypoints=web"
+      - "traefik.http.routers.qbittorrent.middlewares=default-headers@file"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
+      
+      # External access via Cloudflare (update yourdomain.com)
+      - "traefik.http.routers.qbittorrent-secure.rule=Host(`qbit.yourdomain.com`)"
+      - "traefik.http.routers.qbittorrent-secure.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.qbittorrent-secure.middlewares=default-headers@file,secure-headers@file,auth@file"
+
+networks:
+  traefik_net:
+    external: true

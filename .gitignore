@@ -1,0 +1,32 @@
+# Environment files
+.env
+
+# SSL certificates
+certs/acme.json
+certs/*.pem
+certs/*.key
+
+# Logs
+logs/*.log
+
+# Cloudflare credentials
+cloudflared/*.json
+
+# Service data
+services/*/config/
+services/*/cache/
+services/*/data/
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

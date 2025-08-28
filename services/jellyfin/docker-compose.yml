@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    volumes:
+      - ./config:/config
+      - ./cache:/cache
+      - /path/to/media:/media:ro  # Update this path to your media location
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://jellyfin.local
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    ports:
+      - "8096:8096"  # Expose for direct access if needed
+    labels:
+      - "traefik.enable=true"
+      
+      # Local access
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.local`)"
+      - "traefik.http.routers.jellyfin.entrypoints=web"
+      - "traefik.http.routers.jellyfin.middlewares=default-headers@file"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+      
+      # External access via Cloudflare (update yourdomain.com)
+      - "traefik.http.routers.jellyfin-secure.rule=Host(`jellyfin.yourdomain.com`)"
+      - "traefik.http.routers.jellyfin-secure.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.jellyfin-secure.middlewares=default-headers@file,secure-headers@file"
+
+networks:
+  traefik_net:
+    external: true

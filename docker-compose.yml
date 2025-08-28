@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./certs:/certs
+      - ./logs:/var/log
+    networks:
+      - traefik_net
+    environment:
+      - CF_API_EMAIL=${CF_API_EMAIL}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.local`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./tunnel-config.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared:/root/.cloudflared:ro
+    depends_on:
+      - traefik
+
+networks:
+  traefik_net:
+    driver: bridge
+    name: traefik_net
