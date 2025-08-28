@@ -8,9 +8,11 @@ services:
     networks:
       - traefik_net
     volumes:
-      - ./config:/config
-      - ./cache:/cache
-      - /path/to/media:/media:ro  # Update this path to your media location
+      - /mnt/sdb2/qbittorrent/downloads:/downloads
+      - /mnt/sdb2/jellyfin/media/tv:/data/tvshows
+      - /mnt/sdb2/jellyfin/media/movies:/data/movies
+      - /mnt/sdb2/jellyfin/media/cache:/cache
+      - /mnt/sdb2/jellyfin/media/config:/config
     environment:
       - JELLYFIN_PublishedServerUrl=http://jellyfin.local
       - PUID=1000

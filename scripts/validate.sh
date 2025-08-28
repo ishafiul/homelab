@@ -47,6 +47,26 @@ else
     print_warn "qBittorrent container is not running"
 fi
 
+if docker ps | grep -q radarr; then
+    print_check "Radarr container is running"
+else
+    print_warn "Radarr container is not running"
+fi
+
+if docker ps | grep -q sonarr; then
+    print_check "Sonarr container is running"
+else
+    print_warn "Sonarr container is not running"
+fi
+
+if docker ps | grep -q prowlarr; then
+    print_check "Prowlarr container is running"
+else
+    print_warn "Prowlarr container is not running"
+fi
+
+if docker ps | grep -q testapp; then\n    print_check "testapp container is running"\nelse\n    print_warn "testapp container is not running"\nfi
+
 # Check optimization
 print_header "Security Optimization"
 if docker ps --format "{{.Ports}}" | grep -q "0.0.0.0:8096\|0.0.0.0:8081"; then
@@ -85,7 +105,27 @@ else
     print_warn "qBittorrent not accessible via Traefik (may not be started)"
 fi
 
+if curl -s -I http://192.168.0.102:80 -H "Host: radarr.local" | grep -q "HTTP/1.1 200\|HTTP/1.1 401"; then
+    print_check "Radarr accessible via Traefik"
+else
+    print_warn "Radarr not accessible via Traefik (may not be started)"
+fi
+
+if curl -s -I http://192.168.0.102:80 -H "Host: sonarr.local" | grep -q "HTTP/1.1 200\|HTTP/1.1 401"; then
+    print_check "Sonarr accessible via Traefik"
+else
+    print_warn "Sonarr not accessible via Traefik (may not be started)"
+fi
+
+if curl -s -I http://192.168.0.102:80 -H "Host: prowlarr.local" | grep -q "HTTP/1.1 200\|HTTP/1.1 401"; then
+    print_check "Prowlarr accessible via Traefik"
+else
+    print_warn "Prowlarr not accessible via Traefik (may not be started)"
+fi
+
 # Check tunnel
+
+if curl -s -I http://192.168.0.102:80 -H "Host: testapp.local" | grep -q "HTTP/1.1 200\|HTTP/1.1 401"; then\n    print_check "testapp accessible via Traefik"\nelse\n    print_warn "testapp not accessible via Traefik (may not be started)"\nfi
 print_header "Cloudflare Tunnel"
 if pgrep -f "cloudflared tunnel" > /dev/null; then
     print_check "Cloudflare tunnel is running"
@@ -113,4 +153,4 @@ echo
 echo "Next steps:"
 echo "• Update media paths in services/jellyfin/docker-compose.yml"
 echo "• Update download paths in services/qbittorrent/docker-compose.yml"
-echo "• Access services: http://jellyfin.local and http://qbit.local"
+echo "• Access services: http://jellyfin.local, http://qbit.local, http://radarr.local, http://sonarr.local, http://prowlarr.local, and http://testapp.local

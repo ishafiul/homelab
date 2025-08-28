@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    dns:
+      - 8.8.8.8  # Set a public DNS (Google's DNS in this case)
+      - 8.8.4.4  # Backup public DNS
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /mnt/sdb2/sonarr:/config
+      - /mnt/sdb2/qbittorrent/downloads:/downloads
+      - /mnt/sdb2/jellyfin/media/tv:/data/tvshows
+      - /mnt/sdb2/jellyfin/media/movies:/data/movies
+    # ports:
+    #   - "8989:8989"  # Removed - access only through Traefik
+    labels:
+      - "traefik.enable=true"
+      
+      # Local access
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.local`)"
+      - "traefik.http.routers.sonarr.entrypoints=web"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      
+      # External access via Cloudflare tunnel (HTTP)
+      - "traefik.http.routers.sonarr-external.rule=Host(`sonarr.groundcraft.xyz`)"
+      - "traefik.http.routers.sonarr-external.entrypoints=web"
+      
+      # External access via Cloudflare (HTTPS with certificates)
+      - "traefik.http.routers.sonarr-secure.rule=Host(`sonarr.groundcraft.xyz`)"
+      - "traefik.http.routers.sonarr-secure.entrypoints=websecure"
+      - "traefik.http.routers.sonarr-secure.tls.certresolver=cloudflare"
+
+networks:
+  traefik_net:
+    external: true

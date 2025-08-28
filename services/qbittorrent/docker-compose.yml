@@ -13,8 +13,8 @@ services:
       - TZ=UTC
       - WEBUI_PORT=8080
     volumes:
-      - ./config:/config
-      - /path/to/downloads:/downloads  # Update this path to your downloads location
+      - /mnt/sdb2/qbittorrent/downloads/config:/config
+      - /mnt/sdb2/qbittorrent/downloads:/downloads  # Update this path to your downloads location
     ports:
       - "6881:6881"     # Torrent port (required for P2P)
       - "6881:6881/udp" # Torrent port UDP (required for P2P)

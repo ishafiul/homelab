@@ -1,208 +1,293 @@
 # Traefik Homelab Setup
 
-Complete Traefik configuration for local services with Cloudflare integration and external access without port forwarding.
+A complete Traefik reverse proxy setup with Docker Compose for local services and Cloudflare Tunnels for external access.
+
+## 🏗️ Architecture
+
+- **Traefik**: Reverse proxy with automatic SSL certificates
+- **Cloudflare Tunnel**: Secure external access without port forwarding
+- **Services**: Jellyfin, qBittorrent, Radarr, Sonarr, Prowlarr
+- **Network**: Docker network with Traefik-only access
 
 ## 🚀 Quick Start
 
-1. **Run the setup script:**
-   ```bash
-   ./setup.sh
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp env.example .env
-   # Edit .env with your Cloudflare credentials
-   ```
-
-3. **Start Traefik:**
-   ```bash
-   docker-compose up -d
-   ```
+```bash
+# Clone and setup
+git clone <your-repo>
+cd traefik
+cp env.example .env
+# Edit .env with your Cloudflare credentials
+./scripts/setup.sh
+```
 
 ## 📁 Project Structure
 
 ```
 traefik/
-├── docker-compose.yml          # Main Traefik container
-├── traefik.yml                 # Static configuration
-├── dynamic.yml                 # Dynamic configuration
+├── docker-compose.yml          # Main Traefik + Cloudflared
+├── traefik.yml                 # Traefik static config
+├── dynamic.yml                 # Traefik dynamic config
 ├── tunnel-config.yml           # Cloudflare tunnel config
-├── env.example                 # Environment variables template
-├── setup.sh                    # Automated setup script
-├── services/
+├── Makefile                    # Easy management commands
+├── scripts/                    # Management scripts
+│   ├── setup.sh                # Initial setup script
+│   ├── validate.sh             # Health check script
+│   ├── tunnel.sh               # Tunnel management
+│   ├── add-service.sh          # 🚀 Auto-add new services
+│   ├── create-service.sh       # 📝 Create service templates
+│   └── service-template.yml    # 📋 Service template
+├── services/                   # Individual service configs
 │   ├── jellyfin/
-│   │   └── docker-compose.yml  # Jellyfin service
-│   └── qbittorrent/
-│       └── docker-compose.yml  # qBittorrent service
-├── certs/                      # SSL certificates
-├── logs/                       # Traefik logs
-└── cloudflared/               # Tunnel credentials
+│   ├── qbittorrent/
+│   ├── radarr/
+│   ├── sonarr/
+│   └── prowlarr/
+└── cloudflared/                # Cloudflare certificates
 ```
 
-## 🔧 Configuration
+## 🔧 Adding New Services (Simplified!)
 
-### Environment Variables (.env)
+### 🚀 **Quick Method (Recommended)**
 
+#### 1. Create Service from Template
 ```bash
-CF_API_EMAIL=your-email@example.com
-CF_DNS_API_TOKEN=your-cloudflare-api-token
-DOMAIN=groundcraft.xyz
-PUID=1000
-PGID=1000
-MEDIA_PATH=/path/to/media
-DOWNLOADS_PATH=/path/to/downloads
+make create-service SERVICE_NAME=myapp
+```
+This creates:
+- `services/myapp/docker-compose.yml` (from template)
+- Automatically replaces placeholders with your service name
+
+#### 2. Edit the Configuration
+Edit `services/myapp/docker-compose.yml`:
+- Update `image: your-image:latest` → `image: nginx:latest`
+- Update `YOUR_PORT` → `80` (your actual service port)
+- Update `/path/to/config` → `/mnt/data/myapp:/config`
+- Add any additional environment variables or volumes
+
+#### 3. Add Service Automatically
+```bash
+make add-service SERVICE_NAME=myapp
+```
+This automatically:
+- ✅ Updates tunnel configuration
+- ✅ Updates setup script
+- ✅ Updates validation script  
+- ✅ Updates Makefile
+- ✅ Adds local DNS entry
+- ✅ Creates Cloudflare DNS record
+- ✅ Restarts tunnel and Traefik
+- ✅ Starts your service
+
+### 🔧 **Manual Method (Advanced Users)**
+
+#### 1. Create Service Directory
+```bash
+mkdir -p services/your-service
 ```
 
-### Cloudflare API Token
+### 2. Create docker-compose.yml
+```yaml
+version: "3.8"
 
-Create a Cloudflare API token with these permissions:
-- Zone:Zone:Read
-- Zone:DNS:Edit
+services:
+  your-service:
+    image: your-image:latest
+    container_name: your-service
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /path/to/config:/config
+      # Add other volumes as needed
+    labels:
+      - "traefik.enable=true"
+      
+      # Local access
+      - "traefik.http.routers.your-service.rule=Host(`your-service.local`)"
+      - "traefik.http.routers.your-service.entrypoints=web"
+      - "traefik.http.services.your-service.loadbalancer.server.port=YOUR_PORT"
+      
+      # External access via Cloudflare tunnel (HTTP)
+      - "traefik.http.routers.your-service-external.rule=Host(`your-service.yourdomain.com`)"
+      - "traefik.http.routers.your-service-external.entrypoints=web"
+      
+      # External access via Cloudflare (HTTPS)
+      - "traefik.http.routers.your-service-secure.rule=Host(`your-service.yourdomain.com`)"
+      - "traefik.http.routers.your-service-secure.entrypoints=websecure"
+      - "traefik.http.routers.your-service-secure.tls.certresolver=cloudflare"
 
-## 🌐 Access Points
+networks:
+  traefik_net:
+    external: true
+```
 
-### Local Access (Traefik-only)
-- Traefik Dashboard: http://traefik.local:8080
-- Jellyfin: http://jellyfin.local (no direct port 8096)
-- qBittorrent: http://qbit.local (no direct port 8081)
+### 3. Update Tunnel Configuration
+Add to `tunnel-config.yml`:
+```yaml
+  - hostname: your-service.yourdomain.com
+    service: http://YOUR_HOST_IP:80
+    originRequest:
+      httpHostHeader: your-service.yourdomain.com
+```
 
-### External Access (via Cloudflare Tunnel)
-- Jellyfin: https://jellyfin.groundcraft.xyz
-- qBittorrent: https://qbit.groundcraft.xyz
-- Traefik: https://traefik.groundcraft.xyz
+### 4. Update Scripts
+- Add DNS entry to `setup.sh`
+- Add service to `validate.sh`
+- Update access points in `setup.sh`
 
-### Security Benefits
-- ✅ No direct service port exposure
-- ✅ All traffic routed through Traefik
-- ✅ Centralized SSL termination
-- ✅ Better firewall posture
-
-## 🛠️ Service Management
-
-### Start services:
+### 5. Add DNS Records
 ```bash
-# Start Traefik
+# Local DNS
+echo "YOUR_IP  your-service.local" | sudo tee -a /etc/hosts
+
+# Cloudflare DNS
+cloudflared tunnel route dns homelab your-service.yourdomain.com
+```
+
+### 6. Restart Services
+```bash
+make restart-tunnel
+make start your-service
+```
+
+## 🎯 Current Services
+
+| Service | Port | Local URL | External URL | Purpose |
+|---------|------|-----------|--------------|---------|
+| **Traefik** | 80/443/8080 | `traefik.local:8080` | `traefik.groundcraft.xyz` | Reverse proxy & dashboard |
+| **Jellyfin** | 8096 | `jellyfin.local` | `jellyfin.groundcraft.xyz` | Media server |
+| **qBittorrent** | 8080 | `qbit.local` | `qbit.groundcraft.xyz` | Torrent client |
+| **Radarr** | 7878 | `radarr.local` | `radarr.groundcraft.xyz` | Movie automation |
+| **Sonarr** | 8989 | `sonarr.local` | `sonarr.groundcraft.xyz` | TV show automation |
+| **Prowlarr** | 9696 | `prowlarr.local` | `prowlarr.groundcraft.xyz` | Indexer management |
+
+## 🛠️ Management Commands
+
+### Using Makefile (Recommended)
+```bash
+# Service management
+make start all              # Start all services
+make start traefik          # Start Traefik only
+make start jellyfin         # Start specific service
+make stop all               # Stop all services
+make restart all            # Restart all services
+make restart traefik        # Restart Traefik only
+make restart jellyfin       # Restart specific service
+
+# Tunnel management
+make tunnel-start           # Start Cloudflare tunnel
+make tunnel-stop            # Stop Cloudflare tunnel
+make tunnel-restart         # Restart tunnel
+make tunnel-status          # Check tunnel status
+make tunnel-logs            # View tunnel logs
+
+# Maintenance
+make logs [service]         # View service logs
+make status                 # Check all services status
+make validate               # Run health checks
+make clean                  # Clean up containers/networks
+make update                 # Update all services
+
+# Service Creation
+make create-service SERVICE_NAME=myapp  # Create new service from template
+make add-service SERVICE_NAME=myapp     # Integrate service with Traefik
+make show-template                      # View service template
+```
+
+### Manual Commands
+```bash
+# Start services
 docker compose up -d traefik
-
-# Start media services
 docker compose -f services/jellyfin/docker-compose.yml up -d
 docker compose -f services/qbittorrent/docker-compose.yml up -d
-```
-
-### Tunnel management:
-```bash
-# Start tunnel
-./tunnel.sh start
+docker compose -f services/radarr/docker-compose.yml up -d
+docker compose -f services/sonarr/docker-compose.yml up -d
+docker compose -f services/prowlarr/docker-compose.yml up -d
 
 # Check status
-./tunnel.sh status
+./validate.sh
 
-# View logs
-./tunnel.sh logs
-
-# Stop tunnel
-./tunnel.sh stop
-```
-
-### View logs:
-```bash
-docker compose logs traefik
-tail -f cloudflared.log
-```
-
-### Stop services:
-```bash
-docker compose down
-docker compose -f services/jellyfin/docker-compose.yml down
-docker compose -f services/qbittorrent/docker-compose.yml down
-./tunnel.sh stop
+# Manage tunnel
+./scripts/tunnel.sh start|stop|restart|status|logs
 ```
 
 ## 🔒 Security Features
 
-- Automatic HTTPS with Let's Encrypt + Cloudflare DNS
-- Security headers middleware
-- Rate limiting
-- Basic authentication for sensitive services
-- TLS 1.2+ with strong cipher suites
+- **Traefik-only access**: Services not directly exposed to host
+- **Automatic SSL**: Cloudflare DNS challenge for certificates
+- **Security headers**: CORS, XSS protection, etc.
+- **Rate limiting**: Built-in protection against abuse
+- **Authentication**: Basic auth for sensitive services
 
-## 🌍 Cloudflare Tunnel Setup
+## 🌐 Access Points
 
-1. **Install cloudflared:**
-   ```bash
-   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-   sudo dpkg -i cloudflared.deb
-   ```
+### Local Network
+- **Traefik Dashboard**: `http://traefik.local:8080`
+- **Jellyfin**: `http://jellyfin.local`
+- **qBittorrent**: `http://qbit.local`
+- **Radarr**: `http://radarr.local`
+- **Sonarr**: `http://sonarr.local`
+- **Prowlarr**: `http://prowlarr.local`
 
-2. **Authenticate:**
-   ```bash
-   cloudflared tunnel login
-   ```
+### External Access
+- **Jellyfin**: `https://jellyfin.groundcraft.xyz`
+- **qBittorrent**: `https://qbit.groundcraft.xyz`
+- **Radarr**: `https://radarr.groundcraft.xyz`
+- **Sonarr**: `https://sonarr.groundcraft.xyz`
+- **Prowlarr**: `https://prowlarr.groundcraft.xyz`
 
-3. **Create tunnel:**
-   ```bash
-   cloudflared tunnel create homelab
-   ```
+## 📋 Prerequisites
 
-4. **Copy credentials:**
-   ```bash
-   cp ~/.cloudflared/[tunnel-id].json ./cloudflared/
-   ```
+- Docker & Docker Compose
+- Cloudflare account with domain
+- Cloudflared client installed
+- Port 80/443 available (for Traefik)
 
-5. **Update tunnel-config.yml** with your tunnel name and credentials file
+## 🔧 Configuration
 
-6. **Create DNS records** in Cloudflare dashboard pointing to your tunnel
-
-7. **Start tunnel:**
-   ```bash
-   docker-compose up -d cloudflared
-   ```
-
-## 📝 Adding New Services
-
-1. Create service directory in `services/`
-2. Add docker-compose.yml with Traefik labels:
-   ```yaml
-   labels:
-     - "traefik.enable=true"
-     - "traefik.http.routers.myservice.rule=Host(`myservice.local`)"
-     - "traefik.http.routers.myservice.entrypoints=web"
-     - "traefik.http.services.myservice.loadbalancer.server.port=8080"
-   ```
-3. Add to tunnel-config.yml for external access
-4. Update /etc/hosts for local access
-
-## 🔍 Troubleshooting
-
-### Check service status:
+### Environment Variables
+Copy `env.example` to `.env` and configure:
 ```bash
-docker-compose ps
+CLOUDFLARE_API_TOKEN=your_api_token
+CLOUDFLARE_EMAIL=your_email
+DOMAIN=yourdomain.com
 ```
 
-### View Traefik logs:
+### Cloudflare Setup
+1. Create API token with DNS edit permissions
+2. Create tunnel in Cloudflare dashboard
+3. Download tunnel credentials
+4. Place in `cloudflared/` directory
+
+## 🚨 Important Notes
+
+- **Always restart Traefik** when adding/modifying services
+- **Restart tunnel** after updating tunnel configuration
+- **Check logs** if services aren't accessible
+- **Validate setup** after any changes using `make validate`
+
+## 🆘 Troubleshooting
+
+### Common Issues
+1. **Service not accessible**: Check if Traefik is running
+2. **External access fails**: Verify tunnel is running and DNS is correct
+3. **SSL errors**: Check Cloudflare certificate configuration
+4. **Port conflicts**: Ensure no other services use ports 80/443/8080
+
+### Debug Commands
 ```bash
-docker-compose logs traefik
+make logs traefik           # Check Traefik logs
+make tunnel-logs            # Check tunnel logs
+make status                 # Check all services
+docker network inspect traefik_net  # Check network
 ```
 
-### Test connectivity:
-```bash
-curl -H "Host: jellyfin.local" http://localhost
-```
+## 📚 Additional Resources
 
-### Validate certificates:
-```bash
-docker-compose exec traefik cat /certs/acme.json
-```
-
-## 📊 Monitoring
-
-Traefik includes Prometheus metrics on `:8080/metrics` for monitoring integration.
-
-## 🤝 Support
-
-Check logs first, then verify:
-1. Docker network exists: `docker network ls | grep traefik_net`
-2. DNS resolution: `nslookup jellyfin.local`
-3. Cloudflare token permissions
-4. Service port mappings in docker-compose files
+- [Traefik Documentation](https://doc.traefik.io/traefik/)
+- [Cloudflare Tunnels](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
+- [Docker Compose](https://docs.docker.com/compose/)

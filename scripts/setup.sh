@@ -111,7 +111,11 @@ if ! grep -q "traefik.local" /etc/hosts; then
     echo "$LOCAL_IP  traefik.local" | sudo tee -a /etc/hosts
     echo "$LOCAL_IP  jellyfin.local" | sudo tee -a /etc/hosts
     echo "$LOCAL_IP  qbit.local" | sudo tee -a /etc/hosts
+    echo "$LOCAL_IP  radarr.local" | sudo tee -a /etc/hosts
+    echo "$LOCAL_IP  sonarr.local" | sudo tee -a /etc/hosts
+    echo "$LOCAL_IP  prowlarr.local" | sudo tee -a /etc/hosts
     print_success "Added local DNS entries"
+    echo "$LOCAL_IP  testapp.local" | sudo tee -a /etc/hosts
 else
     print_warning "Local DNS entries already exist in /etc/hosts"
 fi
@@ -142,7 +146,11 @@ if docker ps | grep -q traefik; then
     echo "📊 Local Services (Traefik-only access):"
     echo "   - Jellyfin: http://jellyfin.local (no direct port access)"
     echo "   - qBittorrent: http://qbit.local (no direct port access)"
-    echo "   - External: https://jellyfin.groundcraft.xyz & https://qbit.groundcraft.xyz"
+    echo "   - Radarr: http://radarr.local (no direct port access)"
+    echo "   - Sonarr: http://sonarr.local (no direct port access)"
+    echo "   - Prowlarr: http://prowlarr.local (no direct port access)"
+    echo "   - External: https://jellyfin.groundcraft.xyz, https://qbit.groundcraft.xyz, https://radarr.groundcraft.xyz, https://sonarr.groundcraft.xyz, https://prowlarr.groundcraft.xyz, https://testapp.groundcraft.xyz
+   - testapp: http://testapp.local (no direct port access)
     echo
 else
     print_error "Traefik failed to start. Check logs with: $DOCKER_COMPOSE logs traefik"
@@ -178,7 +186,11 @@ print_status "📝 Service Management:"
 echo "Start Traefik:         $DOCKER_COMPOSE up -d traefik"
 echo "Start Jellyfin:        $DOCKER_COMPOSE -f services/jellyfin/docker-compose.yml up -d"
 echo "Start qBittorrent:     $DOCKER_COMPOSE -f services/qbittorrent/docker-compose.yml up -d"
+echo "Start Radarr:          $DOCKER_COMPOSE -f services/radarr/docker-compose.yml up -d"
+echo "Start Sonarr:          $DOCKER_COMPOSE -f services/sonarr/docker-compose.yml up -d"
+echo "Start Prowlarr:        $DOCKER_COMPOSE -f services/prowlarr/docker-compose.yml up -d"
 echo "View logs:             $DOCKER_COMPOSE logs [service-name]"
+echo "Start testapp:          $DOCKER_COMPOSE -f services/testapp/docker-compose.yml up -d"
 echo "Stop all services:     $DOCKER_COMPOSE down && $DOCKER_COMPOSE -f services/*/docker-compose.yml down"
 echo "Tunnel status:         ps aux | grep cloudflared"
 echo "Stop tunnel:           pkill cloudflared"

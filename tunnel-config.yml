@@ -21,7 +21,27 @@ ingress:
     originRequest:
       httpHostHeader: traefik.groundcraft.xyz
       
+  - hostname: radarr.groundcraft.xyz
+    service: http://192.168.0.102:80
+    originRequest:
+      httpHostHeader: radarr.groundcraft.xyz
+      
+  - hostname: sonarr.groundcraft.xyz
+    service: http://192.168.0.102:80
+    originRequest:
+      httpHostHeader: sonarr.groundcraft.xyz
+      
+  - hostname: prowlarr.groundcraft.xyz
+    service: http://192.168.0.102:80
+    originRequest:
+      httpHostHeader: prowlarr.groundcraft.xyz
+      
   # Catch-all rule (required - must be last)
+  - hostname: testapp.groundcraft.xyz
+    service: http://192.168.0.102:80
+    originRequest:
+      httpHostHeader: testapp.groundcraft.xyz
+      
   - service: http_status:404
 
 # Optional: Tunnel configuration

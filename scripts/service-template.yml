@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  your-service-name:
+    image: your-image:latest
+    container_name: your-service-name
+    restart: unless-stopped
+    networks:
+      - traefik_net
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      # Add other environment variables as needed
+    volumes:
+      - /path/to/config:/config
+      # Add other volumes as needed
+    # ports:
+    #   - "YOUR_PORT:YOUR_PORT"  # Comment out - access only through Traefik
+    labels:
+      - "traefik.enable=true"
+      
+      # Local access
+      - "traefik.http.routers.your-service-name.rule=Host(`your-service-name.local`)"
+      - "traefik.http.routers.your-service-name.entrypoints=web"
+      - "traefik.http.services.your-service-name.loadbalancer.server.port=YOUR_PORT"
+      
+      # External access via Cloudflare tunnel (HTTP)
+      - "traefik.http.routers.your-service-name-external.rule=Host(`your-service-name.yourdomain.com`)"
+      - "traefik.http.routers.your-service-name-external.entrypoints=web"
+      
+      # External access via Cloudflare (HTTPS with certificates)
+      - "traefik.http.routers.your-service-name-secure.rule=Host(`your-service-name.yourdomain.com`)"
+      - "traefik.http.routers.your-service-name-secure.entrypoints=websecure"
+      - "traefik.http.routers.your-service-name-secure.tls.certresolver=cloudflare"
+
+networks:
+  traefik_net:
+    external: true
