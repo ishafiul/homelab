@@ -22,9 +22,6 @@ services:
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.local`)"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.entrypoints=web"
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -36,10 +33,10 @@ services:
     volumes:
       - ./tunnel-config.yml:/etc/cloudflared/config.yml:ro
       - ./cloudflared:/root/.cloudflared:ro
+    working_dir: /root/.cloudflared
     depends_on:
       - traefik
 
 networks:
   traefik_net:
-    driver: bridge
-    name: traefik_net
+    external: true

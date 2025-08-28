@@ -1,26 +1,25 @@
 # Cloudflare Tunnel Configuration
-# Replace 'your-tunnel-name' with your actual tunnel name
-# Replace 'your-tunnel-id.json' with your actual tunnel credentials file
-tunnel: your-tunnel-name
-credentials-file: /root/.cloudflared/your-tunnel-id.json
+tunnel: homelab
+credentials-file: /home/ishaf/traefik/cloudflared/0196190e-5e34-4ef0-bfa4-433be669da84.json
+origincert: /home/ishaf/traefik/cloudflared/cert.pem
 
 # Ingress rules - traffic routing
 ingress:
-  # Route external traffic to your services
-  - hostname: jellyfin.yourdomain.com
-    service: http://jellyfin:8096
+  # Route external traffic through Traefik (port 80)
+  - hostname: jellyfin.groundcraft.xyz
+    service: http://192.168.0.102:80
     originRequest:
-      httpHostHeader: jellyfin.yourdomain.com
+      httpHostHeader: jellyfin.groundcraft.xyz
       
-  - hostname: qbit.yourdomain.com
-    service: http://qbittorrent:8080
+  - hostname: qbit.groundcraft.xyz
+    service: http://192.168.0.102:80
     originRequest:
-      httpHostHeader: qbit.yourdomain.com
+      httpHostHeader: qbit.groundcraft.xyz
       
-  - hostname: traefik.yourdomain.com
-    service: http://traefik:8080
+  - hostname: traefik.groundcraft.xyz
+    service: http://192.168.0.102:8080
     originRequest:
-      httpHostHeader: traefik.yourdomain.com
+      httpHostHeader: traefik.groundcraft.xyz
       
   # Catch-all rule (required - must be last)
   - service: http_status:404

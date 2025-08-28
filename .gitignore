@@ -8,18 +8,29 @@ certs/*.key
 
 # Logs
 logs/*.log
+cloudflared.log
 
 # Cloudflare credentials
 cloudflared/*.json
+cloudflared/*.pem
 
 # Service data
 services/*/config/
 services/*/cache/
 services/*/data/
+services/*/downloads/
+services/*/media/
 
 # Temporary files
 *.tmp
 *.temp
+*.deb
+nohup.out
+
+# Scripts (keep in repo)
+# tunnel.sh
+# validate.sh
+# setup.sh
 
 # OS files
 .DS_Store
@@ -30,3 +41,10 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Backup files
+*.backup
+*.bak
+
+# Docker volumes (if using local volumes)
+volumes/

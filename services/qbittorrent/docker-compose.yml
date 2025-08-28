@@ -16,23 +16,25 @@ services:
       - ./config:/config
       - /path/to/downloads:/downloads  # Update this path to your downloads location
     ports:
-      - "6881:6881"     # Torrent port
-      - "6881:6881/udp" # Torrent port UDP
-      - "8080:8080"     # Web UI (for direct access if needed)
+      - "6881:6881"     # Torrent port (required for P2P)
+      - "6881:6881/udp" # Torrent port UDP (required for P2P)
+      # - "8081:8080"     # Web UI removed - access only through Traefik
     labels:
       - "traefik.enable=true"
       
       # Local access
       - "traefik.http.routers.qbittorrent.rule=Host(`qbit.local`)"
       - "traefik.http.routers.qbittorrent.entrypoints=web"
-      - "traefik.http.routers.qbittorrent.middlewares=default-headers@file"
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
       
-      # External access via Cloudflare (update yourdomain.com)
-      - "traefik.http.routers.qbittorrent-secure.rule=Host(`qbit.yourdomain.com`)"
+      # External access via Cloudflare tunnel (HTTP)
+      - "traefik.http.routers.qbittorrent-external.rule=Host(`qbit.groundcraft.xyz`)"
+      - "traefik.http.routers.qbittorrent-external.entrypoints=web"
+      
+      # External access via Cloudflare (HTTPS with certificates)
+      - "traefik.http.routers.qbittorrent-secure.rule=Host(`qbit.groundcraft.xyz`)"
       - "traefik.http.routers.qbittorrent-secure.entrypoints=websecure"
       - "traefik.http.routers.qbittorrent-secure.tls.certresolver=cloudflare"
-      - "traefik.http.routers.qbittorrent-secure.middlewares=default-headers@file,secure-headers@file,auth@file"
 
 networks:
   traefik_net:

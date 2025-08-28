@@ -47,7 +47,7 @@ traefik/
 ```bash
 CF_API_EMAIL=your-email@example.com
 CF_DNS_API_TOKEN=your-cloudflare-api-token
-DOMAIN=yourdomain.com
+DOMAIN=groundcraft.xyz
 PUID=1000
 PGID=1000
 MEDIA_PATH=/path/to/media
@@ -62,37 +62,61 @@ Create a Cloudflare API token with these permissions:
 
 ## 🌐 Access Points
 
-### Local Access
+### Local Access (Traefik-only)
 - Traefik Dashboard: http://traefik.local:8080
-- Jellyfin: http://jellyfin.local
-- qBittorrent: http://qbit.local
+- Jellyfin: http://jellyfin.local (no direct port 8096)
+- qBittorrent: http://qbit.local (no direct port 8081)
 
 ### External Access (via Cloudflare Tunnel)
-- Jellyfin: https://jellyfin.yourdomain.com
-- qBittorrent: https://qbit.yourdomain.com
-- Traefik: https://traefik.yourdomain.com
+- Jellyfin: https://jellyfin.groundcraft.xyz
+- qBittorrent: https://qbit.groundcraft.xyz
+- Traefik: https://traefik.groundcraft.xyz
+
+### Security Benefits
+- ✅ No direct service port exposure
+- ✅ All traffic routed through Traefik
+- ✅ Centralized SSL termination
+- ✅ Better firewall posture
 
 ## 🛠️ Service Management
 
-### Start all services:
+### Start services:
 ```bash
-docker-compose up -d
+# Start Traefik
+docker compose up -d traefik
+
+# Start media services
+docker compose -f services/jellyfin/docker-compose.yml up -d
+docker compose -f services/qbittorrent/docker-compose.yml up -d
 ```
 
-### Start individual service:
+### Tunnel management:
 ```bash
-docker-compose -f services/jellyfin/docker-compose.yml up -d
+# Start tunnel
+./tunnel.sh start
+
+# Check status
+./tunnel.sh status
+
+# View logs
+./tunnel.sh logs
+
+# Stop tunnel
+./tunnel.sh stop
 ```
 
 ### View logs:
 ```bash
-docker-compose logs traefik
-docker-compose logs cloudflared
+docker compose logs traefik
+tail -f cloudflared.log
 ```
 
 ### Stop services:
 ```bash
-docker-compose down
+docker compose down
+docker compose -f services/jellyfin/docker-compose.yml down
+docker compose -f services/qbittorrent/docker-compose.yml down
+./tunnel.sh stop
 ```
 
 ## 🔒 Security Features

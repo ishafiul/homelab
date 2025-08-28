@@ -48,7 +48,14 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
     exit 1
 fi
 
-print_success "Docker Compose is available"
+# Determine which Docker Compose command to use
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    DOCKER_COMPOSE="docker compose"
+fi
+
+print_success "Docker Compose is available ($DOCKER_COMPOSE)"
 
 # Create necessary directories
 print_status "Creating necessary directories..."
@@ -111,7 +118,7 @@ fi
 
 # Start Traefik
 print_status "Starting Traefik..."
-docker-compose up -d traefik
+$DOCKER_COMPOSE up -d traefik
 
 # Wait for Traefik to be ready
 print_status "Waiting for Traefik to be ready..."
@@ -121,14 +128,24 @@ sleep 10
 if docker ps | grep -q traefik; then
     print_success "Traefik is running!"
     echo
+    
+    # Check for optimized setup (no direct port exposures)
+    if docker ps --format "{{.Ports}}" | grep -q "8096\|8081"; then
+        print_warning "Services have direct port access - not optimized for Traefik-only"
+        echo "Consider removing port mappings for better security"
+    else
+        print_success "Optimized setup detected - services use Traefik-only access"
+    fi
+    
     print_status "Access points:"
     echo "🌐 Traefik Dashboard: http://traefik.local:8080"
-    echo "📊 Local Services:"
-    echo "   - Jellyfin: http://jellyfin.local (when started)"
-    echo "   - qBittorrent: http://qbit.local (when started)"
+    echo "📊 Local Services (Traefik-only access):"
+    echo "   - Jellyfin: http://jellyfin.local (no direct port access)"
+    echo "   - qBittorrent: http://qbit.local (no direct port access)"
+    echo "   - External: https://jellyfin.groundcraft.xyz & https://qbit.groundcraft.xyz"
     echo
 else
-    print_error "Traefik failed to start. Check logs with: docker-compose logs traefik"
+    print_error "Traefik failed to start. Check logs with: $DOCKER_COMPOSE logs traefik"
     exit 1
 fi
 
@@ -154,13 +171,31 @@ echo
 echo "6. Create DNS records in Cloudflare for your services"
 echo
 echo "7. Start the tunnel:"
-echo "   docker-compose up -d cloudflared"
+echo "   nohup cloudflared tunnel --config ./tunnel-config.yml run > cloudflared.log 2>&1 &"
+echo "   (Note: Tunnel runs on host, not in Docker container)"
 echo
 print_status "📝 Service Management:"
-echo "Start all services:     docker-compose up -d"
-echo "Start specific service: docker-compose -f services/jellyfin/docker-compose.yml up -d"
-echo "View logs:             docker-compose logs [service-name]"
-echo "Stop all services:     docker-compose down"
+echo "Start Traefik:         $DOCKER_COMPOSE up -d traefik"
+echo "Start Jellyfin:        $DOCKER_COMPOSE -f services/jellyfin/docker-compose.yml up -d"
+echo "Start qBittorrent:     $DOCKER_COMPOSE -f services/qbittorrent/docker-compose.yml up -d"
+echo "View logs:             $DOCKER_COMPOSE logs [service-name]"
+echo "Stop all services:     $DOCKER_COMPOSE down && $DOCKER_COMPOSE -f services/*/docker-compose.yml down"
+echo "Tunnel status:         ps aux | grep cloudflared"
+echo "Stop tunnel:           pkill cloudflared"
 echo
 
+# Offer to start services
+echo
+read -p "Would you like to start Jellyfin and qBittorrent services now? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_status "Starting services..."
+    $DOCKER_COMPOSE -f services/jellyfin/docker-compose.yml up -d || print_warning "Jellyfin failed to start (check config paths)"
+    $DOCKER_COMPOSE -f services/qbittorrent/docker-compose.yml up -d || print_warning "qBittorrent failed to start (check config paths)"
+    sleep 5
+    print_success "Services started! Check http://jellyfin.local and http://qbit.local"
+fi
+
+echo
 print_success "🎉 Traefik setup completed! Check the access points above."
+print_status "📋 Next: Update media/download paths in service configs and set up Cloudflare tunnel for external access."
